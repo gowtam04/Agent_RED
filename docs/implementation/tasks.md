@@ -8,45 +8,46 @@
 
 ---
 
-## Phase 1: Knowledge Base
+## Phase 1: Knowledge Base ✅
 
 ### Setup
-- ⬜ Clone pret/pokered to `external/pokered`
-- ⬜ Create `data/` directory structure
-- ⬜ Create `scripts/` directory for extractors
-- ⬜ Create `src/knowledge/` package
+- ✅ Clone pret/pokered to `external/pokered`
+- ✅ Create `data/` directory structure
+- ✅ Create `scripts/` directory for extractors
+- ✅ Create `src/knowledge/` package
 
 ### Core Extractors
-- ⬜ `scripts/extract_types.py` → `data/type_chart.json`
-- ⬜ `scripts/extract_moves.py` → `data/moves.json`
-- ⬜ `scripts/extract_pokemon.py` → `data/pokemon.json`
-- ⬜ `scripts/extract_items.py` → `data/items.json`
+- ✅ `scripts/extract_types.py` → `data/type_chart.json` (15 types, 82 matchups)
+- ✅ `scripts/extract_moves.py` → `data/moves.json` (165 moves, 50 TMs, 5 HMs)
+- ✅ `scripts/extract_pokemon.py` → `data/pokemon.json` (151 Pokemon)
+- ✅ `scripts/extract_items.py` → `data/items.json` (81 items)
 
 ### Navigation Extractors
-- ⬜ `scripts/extract_maps.py` → `data/maps/*.json`
-- ⬜ `scripts/extract_trainers.py` → `data/trainers.json`
-- ⬜ `scripts/extract_wild.py` → `data/wild_encounters.json`
-- ⬜ `scripts/extract_shops.py` → `data/shops.json`
+- ✅ `scripts/extract_maps.py` → `data/maps/*.json` (223 maps)
+- ✅ `scripts/extract_trainers.py` → `data/trainers.json` (391 trainers, 38 bosses)
+- ✅ `scripts/extract_wild.py` → `data/wild_encounters.json` (56 locations)
+- ✅ `scripts/extract_shops.py` → `data/shops.json` (14 shops)
 
-### Progression Extractors
-- ⬜ `scripts/extract_hm.py` → `data/hm_requirements.json`
-- ⬜ Create `data/story_progression.json` (manual)
+### Progression Data
+- ✅ `data/hm_requirements.json` (manual - HM badge requirements)
+- ✅ `data/story_progression.json` (manual - 24 milestones)
 
 ### Accessor Classes
-- ⬜ `src/knowledge/base.py` - KnowledgeBase interface
-- ⬜ `src/knowledge/type_chart.py`
-- ⬜ `src/knowledge/moves.py`
-- ⬜ `src/knowledge/pokemon.py`
-- ⬜ `src/knowledge/items.py`
-- ⬜ `src/knowledge/maps.py`
-- ⬜ `src/knowledge/trainers.py`
-- ⬜ `src/knowledge/shops.py`
-- ⬜ `src/knowledge/wild_encounters.py`
-- ⬜ `src/knowledge/hm_requirements.py`
-- ⬜ `src/knowledge/story_progression.py`
+- ✅ `src/knowledge/base.py` - KnowledgeBase interface
+- ✅ `src/knowledge/type_chart.py`
+- ✅ `src/knowledge/moves.py`
+- ✅ `src/knowledge/pokemon.py`
+- ✅ `src/knowledge/items.py`
+- ✅ `src/knowledge/maps.py`
+- ✅ `src/knowledge/trainers.py`
+- ✅ `src/knowledge/shops.py`
+- ✅ `src/knowledge/wild_encounters.py`
+- ✅ `src/knowledge/hm_requirements.py`
+- ✅ `src/knowledge/story_progression.py`
 
-### Validation
-- ⬜ `scripts/validate_data.py`
+### Validation & Scripts
+- ✅ `scripts/validate_data.py` (all checks pass)
+- ✅ `scripts/extract_all.py` (master extraction pipeline)
 - ⬜ `tests/test_knowledge/` unit tests
 
 ---
@@ -184,8 +185,8 @@
 
 ## Milestones
 
-### M1: Data Ready
-- ⬜ All knowledge bases extracted and validated
+### M1: Data Ready ✅
+- ✅ All knowledge bases extracted and validated
 
 ### M2: Framework Ready
 - ⬜ Agent framework complete, agents can be instantiated
@@ -210,8 +211,8 @@
 (none yet)
 
 **Next Up:**
-1. Start Phase 1: Clone pokered, create type_chart.json
-2. Start Phase 2: Create types.py and state.py
+1. Start Phase 2: Create types.py and state.py
+2. Start Phase 4: A* pathfinding (can run in parallel with Phase 2)
 
 ---
 
