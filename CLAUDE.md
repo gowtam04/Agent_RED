@@ -49,7 +49,7 @@ StateReader (memory) → GameState → SimpleAgent (Claude API) → Action → E
 4. `GameLoop._execute_action()` translates to `EmulatorInterface` method calls
 5. Emulator advances frames, loop repeats
 
-### Target Multi-Agent System (Planned)
+### Multi-Agent System (In Progress)
 
 ```
 Orchestrator (Sonnet) → detects mode, manages objectives
@@ -58,7 +58,39 @@ Orchestrator (Sonnet) → detects mode, manages objectives
     └── Menu (Haiku) → healing, shopping, inventory
 ```
 
+**Framework (Complete):** Types, GameState, BaseAgent, AgentRegistry, ObjectiveStack, 38 tool definitions in `src/agent/` and `src/tools/`.
+
+**Agents (Phase 3):** Specialized agent implementations pending.
+
 See `docs/implementation/plan.md` for phase status and `docs/implementation/tasks.md` for task tracking.
+
+### Agent Framework Types
+
+```python
+from src.agent import (
+    # Types
+    GameMode, BattleType, Direction, Position, Stats, Move, Pokemon,
+    BattleState, Objective, AgentResult,
+    # Classes
+    GameState, BaseAgent, AgentRegistry, ObjectiveStack,
+)
+
+# Game state with objective management
+state = GameState()
+state.push_objective(Objective(type="defeat_gym", target="Brock"))
+
+# Agent routing by game mode
+registry = AgentRegistry()
+agent_type = registry.route_by_mode("BATTLE")  # Returns "BATTLE"
+```
+
+### Tool Definitions
+
+38 tools defined in `src/tools/definitions.py`:
+- `ORCHESTRATOR_TOOLS` (7): detect_game_mode, get_current_objective, route_to_agent, etc.
+- `NAVIGATION_TOOLS` (8): get_current_position, find_path, execute_movement, etc.
+- `BATTLE_TOOLS` (9): calculate_type_effectiveness, estimate_damage, get_best_move, etc.
+- `MENU_TOOLS` (14): heal_at_pokemon_center, shop_buy, use_item, etc.
 
 ## Knowledge Base
 

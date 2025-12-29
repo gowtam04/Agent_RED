@@ -52,26 +52,27 @@
 
 ---
 
-## Phase 2: Agent Framework
+## Phase 2: Agent Framework ✅
 
 ### Types & State
-- ⬜ `src/agent/types.py` - Enums and dataclasses
-- ⬜ `src/agent/state.py` - GameState class
-- ⬜ `src/agent/objective.py` - ObjectiveStack
+- ✅ `src/agent/types.py` - Enums and dataclasses (GameMode, BattleType, Position, Stats, Move, Pokemon, BattleState, Objective, AgentResult)
+- ✅ `src/agent/state.py` - GameState class with objective management
+- ✅ `src/agent/objective.py` - ObjectiveStack + helper functions
 
 ### Base Infrastructure
-- ⬜ `src/agent/base.py` - BaseAgent abstract class
-- ⬜ `src/agent/registry.py` - AgentRegistry
+- ✅ `src/agent/base.py` - BaseAgent abstract class with Claude API integration
+- ✅ `src/agent/registry.py` - AgentRegistry with routing
 
 ### Tool Definitions
-- ⬜ `src/tools/__init__.py`
-- ⬜ `src/tools/definitions.py` - All 38 tool schemas
+- ✅ `src/tools/__init__.py` - Module exports
+- ✅ `src/tools/definitions.py` - All 38 tool schemas (7 orchestrator + 8 navigation + 9 battle + 14 menu)
 
 ### Package Setup
-- ⬜ `src/agent/__init__.py` with exports
-- ⬜ `tests/test_agent/test_types.py`
-- ⬜ `tests/test_agent/test_state.py`
-- ⬜ `tests/test_agent/test_registry.py`
+- ✅ `src/agent/__init__.py` with exports
+- ✅ `tests/test_agent/test_types.py` (14 tests)
+- ✅ `tests/test_agent/test_state.py` (15 tests)
+- ✅ `tests/test_agent/test_objective.py` (11 tests)
+- ✅ `tests/test_agent/test_registry.py` (12 tests)
 
 ---
 
@@ -188,8 +189,8 @@
 ### M1: Data Ready ✅
 - ✅ All knowledge bases extracted and validated
 
-### M2: Framework Ready
-- ⬜ Agent framework complete, agents can be instantiated
+### M2: Framework Ready ✅
+- ✅ Agent framework complete, agents can be instantiated
 
 ### M3: Agents Working
 - ⬜ All agents implement their tools
@@ -211,8 +212,8 @@
 (none yet)
 
 **Next Up:**
-1. Start Phase 2: Create types.py and state.py
-2. Start Phase 4: A* pathfinding (can run in parallel with Phase 2)
+1. Start Phase 3: Implement OrchestratorAgent, NavigationAgent, BattleAgent, MenuAgent
+2. Start Phase 4: A* pathfinding (can run in parallel with Phase 3)
 
 ---
 

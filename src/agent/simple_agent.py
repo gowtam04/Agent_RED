@@ -202,9 +202,7 @@ Now, based on the current game state provided, decide what action to take next."
         # Battle info
         if state.battle:
             lines.append(f"\n** BATTLE: {state.battle.battle_type} **")
-            lines.append(
-                f"Enemy: {state.battle.enemy_species_name} Lv.{state.battle.enemy_level}"
-            )
+            lines.append(f"Enemy: {state.battle.enemy_species_name} Lv.{state.battle.enemy_level}")
             lines.append(f"Enemy HP: ~{state.battle.enemy_hp_percent:.0f}%")
 
         # Progress
