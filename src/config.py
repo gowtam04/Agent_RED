@@ -90,6 +90,20 @@ class Config(BaseSettings):
         description="Directory for log files",
     )
 
+    # Dashboard Settings
+    dashboard_port: int = Field(
+        default=8000,
+        ge=1024,
+        le=65535,
+        description="Port for the dashboard API server",
+    )
+    state_broadcast_fps: int = Field(
+        default=15,
+        ge=5,
+        le=60,
+        description="Target FPS for state broadcasts to dashboard (5-60)",
+    )
+
     def get_rom_path(self) -> Path:
         """Get the absolute path to the ROM file."""
         rom_path = Path(self.rom_path)

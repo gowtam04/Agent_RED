@@ -117,3 +117,4 @@ class AgentResult:
     error: str | None = None
     handoff_to: AgentType | None = None
     new_objectives: list[Objective] = field(default_factory=list)
+    reasoning: str | None = None  # Agent's reasoning/thought process from Claude

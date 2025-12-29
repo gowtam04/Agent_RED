@@ -1,0 +1,148 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-bg);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.count {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.partyGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  padding: 12px;
+}
+
+.empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 12px;
+}
+
+.emptySlot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-bg);
+  border-radius: 6px;
+  padding: 12px 8px;
+  border: 1px dashed var(--border-color);
+  min-height: 80px;
+}
+
+.emptyText {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.pokemonCard {
+  background: var(--card-bg);
+  border-radius: 6px;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.pokemonHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.slot {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.species {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.level {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.hpBar {
+  height: 6px;
+  background: var(--border-color);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.hpFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.hpHigh {
+  background: linear-gradient(to right, #22c55e, #4ade80);
+}
+
+.hpMedium {
+  background: linear-gradient(to right, #eab308, #facc15);
+}
+
+.hpLow {
+  background: linear-gradient(to right, #dc2626, #ef4444);
+}
+
+.pokemonFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hpText {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.status {
+  font-size: 0.65rem;
+  padding: 1px 4px;
+  background: #ef4444;
+  color: white;
+  border-radius: 2px;
+  text-transform: uppercase;
+  font-weight: 500;
+}

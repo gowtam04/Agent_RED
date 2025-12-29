@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokemon Red AI Agent - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #ffcb05;
+        }
+        .subtitle {
+            color: #888;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            display: block;
+            margin: 1rem 0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            color: #4ade80;
+        }
+        .status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .api-link {
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Pokemon Red AI Agent</h1>
+        <p class="subtitle">Web Dashboard</p>
+
+        <div class="card">
+            <h2>Frontend Not Built</h2>
+            <p>The React frontend has not been built yet. To build it, run:</p>
+            <code>cd ui && npm install && npm run build</code>
+            <p>Or for development with hot reload:</p>
+            <code>cd ui && npm run dev</code>
+        </div>
+
+        <div class="card">
+            <h2>API Status</h2>
+            <div class="status">
+                <span class="dot"></span>
+                <span>Backend is running</span>
+            </div>
+            <p class="api-link">
+                <a href="/docs" target="_blank">View API Documentation (Swagger UI)</a>
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Quick Start</h2>
+            <p>1. Build the frontend (see above)</p>
+            <p>2. <a href="/api/start" target="_blank">POST /api/start</a> to start the game</p>
+            <p>3. Connect to <code>ws://localhost:8000/ws/game-state</code></p>
+        </div>
+    </div>
+</body>
+</html>

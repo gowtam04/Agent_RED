@@ -121,26 +121,30 @@ class BaseAgent(ABC):
         state: GameState,
     ) -> AgentResult:
         """Process tool calls from Claude's response."""
+        # First, capture all text blocks as reasoning (Claude's thoughts)
+        reasoning_parts: list[str] = []
+        for block in response.content:
+            if block.type == "text" and block.text.strip():
+                reasoning_parts.append(block.text)
+        reasoning = "\n".join(reasoning_parts) if reasoning_parts else None
+
+        # Process tool calls
         for block in response.content:
             if block.type == "tool_use":
                 tool_name = block.name
                 tool_input = cast(dict[str, Any], block.input)
 
-                # Execute the tool
+                # Execute the tool and attach reasoning
                 result = self._execute_tool(tool_name, tool_input, state)
+                result.reasoning = reasoning
                 return result
 
-        # No tool call - extract text response
-        text = ""
-        for block in response.content:
-            if block.type == "text":
-                text = block.text
-                break
-
+        # No tool call - text-only response
         return AgentResult(
             success=True,
             action_taken="response",
-            result_data={"text": text},
+            result_data={"text": reasoning or ""},
+            reasoning=reasoning,
         )
 
     @abstractmethod

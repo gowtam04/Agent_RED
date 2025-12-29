@@ -12,10 +12,20 @@ An AI agent that plays Pokemon Red using Claude. The agent controls a PyBoy Game
 # Install dependencies
 poetry install
 
-# Run the agent
+# Run the agent (console mode)
 poetry run python -m src.main
 # or
 poetry run pokemon-agent
+
+# Run the web dashboard
+poetry run pokemon-dashboard
+# Open browser to http://localhost:8000
+
+# Build frontend (required before running dashboard)
+cd ui && npm install && npm run build
+
+# Frontend development (hot reload)
+cd ui && npm run dev
 
 # Linting and formatting
 poetry run ruff check src

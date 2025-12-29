@@ -52,7 +52,9 @@ class GameLoop:
         self.state_converter = StateConverter()
 
         # Agent system
-        self.registry = AgentRegistry()
+        import anthropic
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        self.registry = AgentRegistry(client=client)
         self.agent_state = AgentGameState()
 
         # Recovery
