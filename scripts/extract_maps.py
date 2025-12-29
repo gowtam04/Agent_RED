@@ -120,6 +120,24 @@ def main():
     # Create output directory
     OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
+    # Save map constants (numeric ID <-> name mapping)
+    # Create id_to_name mapping for StateConverter
+    id_to_name = {}
+    name_to_id = {}
+    for name, info in map_info.items():
+        map_id = info["id"]
+        id_to_name[map_id] = name
+        name_to_id[name] = map_id
+
+    map_constants = {
+        "id_to_name": id_to_name,
+        "name_to_id": name_to_id,
+        "total_maps": len(map_info),
+    }
+    with open(OUTPUT_PATH / "map_constants.json", "w") as f:
+        json.dump(map_constants, f, indent=2)
+    print(f"Saved map constants with {len(id_to_name)} ID mappings")
+
     # Save index
     index = {
         "maps": sorted(maps.keys()),

@@ -164,32 +164,37 @@
 
 ---
 
-## Phase 5: Integration
+## Phase 5: Integration ✅
 
 ### Game Loop
-- ⬜ Update `src/main.py` with Orchestrator pattern
-- ⬜ Add objective initialization
-- ⬜ Implement agent handoff
+- ✅ Update `src/main.py` with Orchestrator pattern
+- ✅ Add objective initialization
+- ✅ Implement agent handoff
+
+### State Conversion
+- ✅ `src/emulator/state_converter.py` - Bridges emulator → agent state
+- ✅ Extract map ID constants (`data/maps/map_constants.json`)
+- ✅ Pokemon enrichment with types/moves/stats from knowledge base
 
 ### State Reader
-- ⬜ Enhance `src/emulator/state_reader.py`
-- ⬜ Add enemy Pokemon reading
-- ⬜ Add menu/dialogue detection
-- ⬜ Add move/PP reading
+- ✅ Enhance `src/emulator/state_reader.py`
+- ✅ Add move/PP reading (RawMove dataclass)
+- ✅ Add stats reading (RawStats dataclass)
+- ✅ Add inventory reading (InventoryItem dataclass)
 
 ### Error Handling
-- ⬜ `src/recovery.py` - Failure diagnosis
-- ⬜ Checkpoint system
-- ⬜ Auto-recovery logic
+- ✅ `src/recovery.py` - Failure diagnosis and recovery
+- ✅ Checkpoint system (periodic save states)
+- ✅ Auto-recovery logic (RecoveryManager)
 
 ### Configuration
-- ⬜ Update `src/config.py` with new settings
-- ⬜ `src/logging_config.py`
+- ✅ Update `src/config.py` with new settings (objectives, checkpoints, retries)
+- ✅ `src/logging_config.py` - File handlers, rotation, agent loggers
 
 ### Testing
-- ⬜ `tests/test_integration/test_game_loop.py`
-- ⬜ `tests/test_integration/test_full_cycle.py`
-- ⬜ End-to-end test with save states
+- ✅ `tests/test_integration/conftest.py` - Shared fixtures
+- ✅ `tests/test_integration/test_state_converter.py` (14 tests)
+- ✅ `tests/test_integration/test_game_loop.py` (16 tests)
 
 ---
 
@@ -207,8 +212,8 @@
 ### M4: Navigation Working ✅
 - ✅ A* pathfinding integrated with Navigation agent
 
-### M5: Full Integration
-- ⬜ Complete game loop running with all agents
+### M5: Full Integration ✅
+- ✅ Complete game loop running with all agents (227 tests passing)
 
 ### M6: First Gym
 - ⬜ Agent can defeat Brock
@@ -218,13 +223,15 @@
 ## Current Focus
 
 **Active Tasks:**
-(none yet)
+(none)
 
 **Completed:**
-- Phase 4: Pathfinding ✅ (69 new tests, 207 total tests passing)
+- Phase 5: Integration ✅ (30 new tests, 227 total tests passing)
+- Phase 4: Pathfinding ✅ (69 new tests)
 
 **Next Up:**
-1. Start Phase 5: Integration (connect all agents to game loop)
+1. End-to-end testing with actual ROM
+2. Work toward M6: Defeat Brock
 
 ---
 

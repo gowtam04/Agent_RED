@@ -1,158 +1,283 @@
-"""Main entry point for the Pokemon Red AI Agent."""
+"""Main entry point for the Pokemon Red AI Agent.
+
+This module implements the Orchestrator-based game loop that coordinates
+multiple specialized agents (Navigation, Battle, Menu) to play Pokemon Red.
+"""
+
+from __future__ import annotations
 
 import signal
 import sys
 import time
-from pathlib import Path
 
 import structlog
 
-from .agent import SimpleAgent
-from .config import get_config
+from .agent import AgentRegistry, AgentResult, Objective
+from .agent import GameState as AgentGameState
+from .config import Config, get_config
 from .emulator import Button, EmulatorInterface, StateReader
+from .emulator.state_converter import StateConverter
 from .logging_config import setup_logging
+from .recovery import RecoveryManager, diagnose_failure, execute_recovery
 
 logger = structlog.get_logger()
 
 
 class GameLoop:
     """
-    Main game loop that coordinates the emulator and AI agent.
+    Main game loop using multi-agent architecture.
 
-    Responsible for:
-    - Running the game loop
-    - Reading game state
-    - Getting agent decisions
-    - Executing actions
-    - Handling interrupts
+    Coordinates the Orchestrator agent which routes to specialized agents
+    (Navigation, Battle, Menu) based on the current game mode.
     """
 
-    def __init__(
-        self,
-        emulator: EmulatorInterface,
-        agent: SimpleAgent,
-        checkpoint_interval: int = 300,  # 5 minutes
-    ):
+    def __init__(self, settings: Config):
         """
         Initialize the game loop.
 
         Args:
-            emulator: The emulator interface
-            agent: The AI agent
-            checkpoint_interval: Seconds between auto-saves
+            settings: Application configuration.
         """
-        self._emulator = emulator
-        self._agent = agent
-        self._state_reader = StateReader(emulator)
-        self._checkpoint_interval = checkpoint_interval
+        self.settings = settings
 
+        # Initialize emulator
+        self.emulator = EmulatorInterface(
+            rom_path=settings.get_rom_path(),
+            headless=settings.headless,
+            speed=settings.emulation_speed,
+        )
+
+        # State reading and conversion
+        self.state_reader = StateReader(self.emulator)
+        self.state_converter = StateConverter()
+
+        # Agent system
+        self.registry = AgentRegistry()
+        self.agent_state = AgentGameState()
+
+        # Recovery
+        self.recovery = RecoveryManager(
+            max_retries=settings.max_retries,
+            retry_delay=settings.retry_delay_seconds,
+        )
+
+        # Checkpointing
+        self.last_checkpoint = time.time()
+        self._last_save_state: bytes | None = None
+
+        # Control
         self._running = False
-        self._last_checkpoint_time = time.time()
-        self._last_checkpoint: bytes | None = None
         self._start_time: float | None = None
 
+        # Set initial objective
+        self._set_initial_objective()
+
+    def _set_initial_objective(self) -> None:
+        """Set the initial high-level objective from config."""
+        objective_map = {
+            "become_champion": Objective(
+                type="become_champion",
+                target=self.settings.initial_objective_target,
+                priority=1,
+            ),
+            "defeat_gym": Objective(
+                type="defeat_gym",
+                target=self.settings.initial_objective_target,
+                priority=5,
+            ),
+            "catch_pokemon": Objective(
+                type="catch_pokemon",
+                target=self.settings.initial_objective_target,
+                priority=3,
+            ),
+        }
+
+        obj = objective_map.get(
+            self.settings.initial_objective,
+            objective_map["become_champion"],
+        )
+        self.agent_state.push_objective(obj)
+        logger.info(
+            "Initial objective set",
+            type=obj.type,
+            target=obj.target,
+        )
+
     def run(self) -> None:
-        """Run the main game loop."""
+        """Main game loop."""
         self._running = True
         self._start_time = time.time()
 
         # Create initial checkpoint
-        self._last_checkpoint = self._emulator.save_state()
+        self._last_save_state = self.emulator.save_state()
         logger.info("Initial checkpoint created")
 
-        logger.info("Starting game loop", checkpoint_interval=self._checkpoint_interval)
+        logger.info(
+            "Starting game loop",
+            checkpoint_interval=self.settings.checkpoint_interval_seconds,
+        )
 
         try:
-            while self._running and self._emulator.is_running:
-                self._loop_iteration()
+            while self._running and self.emulator.is_running:
+                self._tick()
 
         except KeyboardInterrupt:
             logger.info("Interrupted by user")
         except Exception as e:
             logger.error("Error in game loop", error=str(e), exc_info=True)
-            self._handle_error(e)
+            self._handle_failure(str(e))
         finally:
             self._cleanup()
 
-    def _loop_iteration(self) -> None:
+    def _tick(self) -> None:
         """Single iteration of the game loop."""
-        # 1. Read current game state
-        game_state = self._state_reader.get_game_state()
+        # 1. Read current game state from emulator
+        raw_state = self.state_reader.get_game_state()
 
-        # 2. Log current state (abbreviated)
+        # 2. Convert to agent state (updates agent_state in-place)
+        self.state_converter.convert(raw_state, self.agent_state)
+
+        # 3. Log current state
+        pos = self.agent_state.position
+        obj = self.agent_state.current_objective
         logger.debug(
             "Game state",
-            mode=game_state.mode.name,
-            position=str(game_state.position),
-            party_count=game_state.party_count,
+            mode=self.agent_state.mode,
+            position=f"{pos.map_id} ({pos.x}, {pos.y})",
+            party_count=len(self.agent_state.party),
+            objective=obj.type if obj else None,
         )
 
-        # 3. Get agent decision
-        action = self._agent.get_action(game_state)
+        # 4. Get Orchestrator decision
+        orchestrator = self.registry.get_agent("ORCHESTRATOR")
+        result = orchestrator.act(self.agent_state)
 
-        # 4. Execute the action
-        self._execute_action(action)
+        if not result.success:
+            logger.warning(f"Orchestrator failed: {result.error}")
+            self._handle_failure(result.error or "Orchestrator failure")
+            return
 
-        # 5. Run emulator for a short time to let action take effect
-        self._emulator.tick(30)  # ~0.5 seconds at 60fps
+        # 5. If Orchestrator routes to another agent, execute that agent
+        if result.handoff_to:
+            self._execute_handoff(result)
 
-        # 6. Periodic checkpoint
-        now = time.time()
-        if now - self._last_checkpoint_time > self._checkpoint_interval:
-            self._create_checkpoint()
-            self._last_checkpoint_time = now
+        # 6. Process new objectives from orchestrator
+        for obj in result.new_objectives:
+            self.agent_state.push_objective(obj)
+            logger.info(f"New objective: {obj.type} -> {obj.target}")
 
-    def _execute_action(self, action: dict) -> None:
-        """Execute an action from the agent."""
-        action_type = action.get("type")
-        reason = action.get("reason", "")
+        # 7. Record success for recovery tracking
+        self.recovery.record_success()
 
-        logger.info("Executing action", type=action_type, reason=reason)
+        # 8. Checkpoint periodically
+        self._maybe_checkpoint()
 
-        if action_type == "press_button":
-            button_name = action.get("button", "A")
+        # 9. Small delay to prevent hammering
+        time.sleep(0.1)
+
+    def _execute_handoff(self, orchestrator_result: AgentResult) -> None:
+        """Execute a handoff to a specialist agent.
+
+        Args:
+            orchestrator_result: Result from orchestrator with handoff info.
+        """
+        agent_type = orchestrator_result.handoff_to
+        if not agent_type:
+            return
+
+        logger.info(f"Handing off to {agent_type} agent")
+
+        agent = self.registry.get_agent(agent_type)
+
+        # Check for Opus escalation (for boss battles)
+        if orchestrator_result.result_data.get("escalate_to_opus"):
+            if self.settings.use_opus_for_bosses:
+                agent.model = "opus"
+                logger.info(f"Escalated {agent_type} agent to Opus model")
+
+        # Execute the agent
+        agent_result = agent.act(self.agent_state)
+
+        if not agent_result.success:
+            logger.warning(f"{agent_type} agent failed: {agent_result.error}")
+            self._handle_failure(agent_result.error or f"{agent_type} failure")
+            return
+
+        # Execute the result (translate to emulator actions)
+        self._execute_result(agent_result)
+
+        # Process new objectives from agent
+        for obj in agent_result.new_objectives:
+            self.agent_state.push_objective(obj)
+            logger.info(f"New objective from {agent_type}: {obj.type} -> {obj.target}")
+
+    def _execute_result(self, result: AgentResult) -> None:
+        """Execute an agent result by translating to emulator actions.
+
+        Args:
+            result: Result from an agent containing action info.
+        """
+        action = result.action_taken
+        data = result.result_data
+
+        logger.info("Executing action", action=action, data=data)
+
+        if action == "press_button":
+            button_name = data.get("button", "A")
             try:
                 button = Button[button_name]
-                self._emulator.press_button(button)
+                self.emulator.press_button(button)
             except KeyError:
                 logger.warning("Invalid button", button=button_name)
 
-        elif action_type == "move_direction":
-            direction = action.get("direction", "DOWN")
-            tiles = action.get("tiles", 1)
-            self._emulator.move(direction, tiles)
+        elif action == "move" or action == "execute_movement":
+            direction = data.get("direction", "DOWN")
+            tiles = data.get("tiles", 1)
+            self.emulator.move(direction, tiles)
 
-        elif action_type == "wait":
-            seconds = action.get("seconds", 1.0)
-            self._emulator.run_for_seconds(seconds)
+        elif action == "wait":
+            seconds = data.get("seconds", 1.0)
+            self.emulator.run_for_seconds(seconds)
+
+        elif action in ("detect_game_mode", "route_to_agent", "get_current_objective"):
+            # Orchestrator internal actions - no emulator action needed
+            pass
 
         else:
-            logger.warning("Unknown action type", type=action_type)
+            # For unrecognized actions, advance frames to let game progress
+            logger.debug(f"Unhandled action type: {action}")
+            self.emulator.tick(30)
 
-    def _create_checkpoint(self) -> None:
-        """Create a checkpoint save state."""
-        self._last_checkpoint = self._emulator.save_state()
-        logger.info(
-            "Checkpoint created",
-            frame=self._emulator.frame_count,
-            actions=self._agent.action_count,
-        )
+        # Always advance frames after action to let it take effect
+        self.emulator.tick(30)
 
-    def _handle_error(self, error: Exception) -> None:
-        """Handle errors by attempting recovery."""
-        logger.error("Attempting recovery from error", error=str(error))
+    def _handle_failure(self, error: str) -> None:
+        """Handle agent failure with recovery.
 
-        if self._last_checkpoint:
-            try:
-                self._emulator.load_state(self._last_checkpoint)
-                logger.info("Recovered from checkpoint")
-                # Reset agent conversation to avoid confusion
-                self._agent.reset_conversation()
-            except Exception as e:
-                logger.error("Failed to recover from checkpoint", error=str(e))
-                self._running = False
-        else:
+        Args:
+            error: Error message describing the failure.
+        """
+        self.recovery.record_failure(error)
+
+        if self.recovery.should_abort():
+            logger.error("Too many failures, aborting")
             self._running = False
+            return
+
+        # Diagnose and execute recovery
+        action = diagnose_failure(self.agent_state, error)
+        success = execute_recovery(action, self)
+
+        if not success:
+            logger.warning("Recovery failed")
+
+    def _maybe_checkpoint(self) -> None:
+        """Create checkpoint if enough time has passed."""
+        now = time.time()
+        if now - self.last_checkpoint > self.settings.checkpoint_interval_seconds:
+            logger.info("Creating checkpoint...")
+            self._last_save_state = self.emulator.save_state()
+            self.last_checkpoint = now
 
     def _cleanup(self) -> None:
         """Clean up resources."""
@@ -161,22 +286,25 @@ class GameLoop:
             logger.info(
                 "Game loop ended",
                 duration_seconds=int(duration),
-                total_frames=self._emulator.frame_count,
-                total_actions=self._agent.action_count,
+                total_frames=self.emulator.frame_count,
             )
 
     def stop(self) -> None:
-        """Stop the game loop."""
+        """Stop the game loop gracefully."""
         self._running = False
 
 
 def main() -> None:
-    """Main entry point."""
+    """Entry point."""
     # Load configuration
     config = get_config()
 
     # Setup logging
-    setup_logging(config.log_level)
+    setup_logging(
+        log_level=config.log_level,
+        log_to_file=config.log_to_file,
+        log_dir=config.log_dir,
+    )
 
     logger.info(
         "Pokemon Red AI Agent starting",
@@ -184,6 +312,7 @@ def main() -> None:
         rom_path=config.rom_path,
         headless=config.headless,
         speed=config.emulation_speed,
+        initial_objective=config.initial_objective,
     )
 
     # Validate ROM exists
@@ -196,37 +325,23 @@ def main() -> None:
         )
         sys.exit(1)
 
-    # Initialize emulator
-    logger.info("Initializing emulator", rom_path=str(rom_path))
-    emulator = EmulatorInterface(
-        rom_path=rom_path,
-        headless=config.headless,
-        speed=config.emulation_speed,
-    )
-
-    # Initialize agent
-    logger.info("Initializing AI agent", model=config.agent_model)
-    agent = SimpleAgent(
-        api_key=config.anthropic_api_key,
-        model=config.agent_model,
-    )
-
     # Create game loop
-    game_loop = GameLoop(emulator, agent)
+    logger.info("Initializing game loop")
+    game = GameLoop(config)
 
     # Setup signal handlers for graceful shutdown
-    def signal_handler(signum, frame):
+    def signal_handler(signum: int, frame: object) -> None:
         logger.info("Received signal, shutting down", signal=signum)
-        game_loop.stop()
+        game.stop()
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
     # Run the game loop
     try:
-        game_loop.run()
+        game.run()
     finally:
-        emulator.close()
+        game.emulator.close()
         logger.info("Emulator closed")
 
 

@@ -33,6 +33,25 @@ class Position:
 
 
 @dataclass
+class RawMove:
+    """Raw move data read from memory."""
+
+    move_id: int
+    pp_current: int
+    pp_ups: int = 0  # Number of PP Ups applied (0-3)
+
+
+@dataclass
+class RawStats:
+    """Raw stats read from memory."""
+
+    attack: int
+    defense: int
+    speed: int
+    special: int
+
+
+@dataclass
 class Pokemon:
     """Data for a single Pokemon."""
 
@@ -42,6 +61,8 @@ class Pokemon:
     current_hp: int
     max_hp: int
     status: Optional[str] = None  # None, "POISON", "BURN", "SLEEP", etc.
+    moves: list[RawMove] = field(default_factory=list)
+    stats: Optional[RawStats] = None
 
     @property
     def hp_percent(self) -> float:
@@ -75,6 +96,15 @@ class BattleState:
 
 
 @dataclass
+class InventoryItem:
+    """An item in the player's bag."""
+
+    item_id: int
+    item_name: str
+    count: int
+
+
+@dataclass
 class GameState:
     """Complete snapshot of the current game state."""
 
@@ -87,6 +117,7 @@ class GameState:
     money: int = 0
     frame_count: int = 0
     battle: Optional[BattleState] = None
+    inventory: list[InventoryItem] = field(default_factory=list)
 
     @property
     def in_battle(self) -> bool:
@@ -148,20 +179,57 @@ class StateReader:
         PARTY_SPECIES = 0xD164  # 6 bytes, one per slot
         PARTY_DATA_START = 0xD16B  # 44 bytes per Pokemon
 
+        # Party Pokemon structure offsets (from base of each Pokemon's data)
+        # Each Pokemon is 44 bytes
+        POKE_SPECIES = 0x00
+        POKE_HP_CURRENT = 0x01  # 2 bytes
+        POKE_STATUS = 0x04
+        POKE_TYPE1 = 0x05
+        POKE_TYPE2 = 0x06
+        POKE_MOVE1 = 0x08
+        POKE_MOVE2 = 0x09
+        POKE_MOVE3 = 0x0A
+        POKE_MOVE4 = 0x0B
+        POKE_EXP = 0x0E  # 3 bytes
+        POKE_HP_EV = 0x11  # 2 bytes
+        POKE_ATK_EV = 0x13  # 2 bytes
+        POKE_DEF_EV = 0x15  # 2 bytes
+        POKE_SPD_EV = 0x17  # 2 bytes
+        POKE_SPC_EV = 0x19  # 2 bytes
+        POKE_IVS = 0x1B  # 2 bytes
+        POKE_PP1 = 0x1D
+        POKE_PP2 = 0x1E
+        POKE_PP3 = 0x1F
+        POKE_PP4 = 0x20
+        POKE_LEVEL = 0x21
+        POKE_HP_MAX = 0x22  # 2 bytes
+        POKE_ATK = 0x24  # 2 bytes
+        POKE_DEF = 0x26  # 2 bytes
+        POKE_SPD = 0x28  # 2 bytes
+        POKE_SPC = 0x2A  # 2 bytes
+
         # Battle state
         BATTLE_TYPE = 0xD057  # 0=none, 1=wild, 2=trainer
+        BATTLE_TURN = 0xCCD5
         ENEMY_SPECIES = 0xCFE5
         ENEMY_LEVEL = 0xCFF3
         ENEMY_HP_CURRENT = 0xCFE6  # 2 bytes
         ENEMY_HP_MAX = 0xCFF4  # 2 bytes
+        ENEMY_STATUS = 0xCFE9
 
         # Game state flags
         MENU_OPEN = 0xD730
         TEXT_BOX_OPEN = 0xC4F2
+        DIALOGUE_INDEX = 0xCF8B
+        TEXT_BOX_ID = 0xCF94
 
         # Progress
         MONEY = 0xD347  # 3 bytes, BCD encoded
         BADGES = 0xD356  # Bit flags
+
+        # Inventory
+        BAG_ITEM_COUNT = 0xD31D
+        BAG_ITEMS_START = 0xD31E  # Item ID, Count pairs
 
     # Pokemon species names (Gen 1, indices 1-151)
     # Simplified list - full implementation would load from knowledge base
@@ -408,13 +476,19 @@ class StateReader:
         base = self.Addr.PARTY_DATA_START + (index * 44)
 
         # Read HP and level
-        current_hp = self._emu.read_memory_word(base + 1)
-        level = self._emu.read_memory(base + 33)
-        max_hp = self._emu.read_memory_word(base + 34)
+        current_hp = self._emu.read_memory_word(base + self.Addr.POKE_HP_CURRENT)
+        level = self._emu.read_memory(base + self.Addr.POKE_LEVEL)
+        max_hp = self._emu.read_memory_word(base + self.Addr.POKE_HP_MAX)
 
         # Read status
-        status_byte = self._emu.read_memory(base + 4)
+        status_byte = self._emu.read_memory(base + self.Addr.POKE_STATUS)
         status = self._decode_status(status_byte)
+
+        # Read moves
+        moves = self._read_pokemon_moves(base)
+
+        # Read stats
+        stats = self._read_pokemon_stats(base)
 
         return Pokemon(
             species_id=species_id,
@@ -423,6 +497,51 @@ class StateReader:
             current_hp=current_hp,
             max_hp=max_hp,
             status=status,
+            moves=moves,
+            stats=stats,
+        )
+
+    def _read_pokemon_moves(self, base: int) -> list[RawMove]:
+        """Read the 4 moves for a Pokemon."""
+        moves = []
+        move_offsets = [
+            self.Addr.POKE_MOVE1,
+            self.Addr.POKE_MOVE2,
+            self.Addr.POKE_MOVE3,
+            self.Addr.POKE_MOVE4,
+        ]
+        pp_offsets = [
+            self.Addr.POKE_PP1,
+            self.Addr.POKE_PP2,
+            self.Addr.POKE_PP3,
+            self.Addr.POKE_PP4,
+        ]
+
+        for move_offset, pp_offset in zip(move_offsets, pp_offsets):
+            move_id = self._emu.read_memory(base + move_offset)
+            if move_id == 0:
+                continue  # Empty move slot
+
+            pp_byte = self._emu.read_memory(base + pp_offset)
+            # PP byte format: upper 2 bits = PP Ups applied, lower 6 bits = current PP
+            pp_ups = (pp_byte >> 6) & 0x03
+            pp_current = pp_byte & 0x3F
+
+            moves.append(RawMove(
+                move_id=move_id,
+                pp_current=pp_current,
+                pp_ups=pp_ups,
+            ))
+
+        return moves
+
+    def _read_pokemon_stats(self, base: int) -> RawStats:
+        """Read the calculated stats for a Pokemon."""
+        return RawStats(
+            attack=self._emu.read_memory_word(base + self.Addr.POKE_ATK),
+            defense=self._emu.read_memory_word(base + self.Addr.POKE_DEF),
+            speed=self._emu.read_memory_word(base + self.Addr.POKE_SPD),
+            special=self._emu.read_memory_word(base + self.Addr.POKE_SPC),
         )
 
     def _decode_status(self, status_byte: int) -> Optional[str]:
@@ -492,6 +611,131 @@ class StateReader:
         )
 
     # ─────────────────────────────────────────────────────────
+    # INVENTORY READING
+    # ─────────────────────────────────────────────────────────
+
+    # Item ID to name mapping (Gen 1)
+    # Key items and common items - for full list, use knowledge base
+    ITEM_NAMES = {
+        0x00: "???",
+        0x01: "MASTER_BALL",
+        0x02: "ULTRA_BALL",
+        0x03: "GREAT_BALL",
+        0x04: "POKE_BALL",
+        0x05: "TOWN_MAP",
+        0x06: "BICYCLE",
+        0x07: "?????",
+        0x08: "SAFARI_BALL",
+        0x09: "POKEDEX",
+        0x0A: "MOON_STONE",
+        0x0B: "ANTIDOTE",
+        0x0C: "BURN_HEAL",
+        0x0D: "ICE_HEAL",
+        0x0E: "AWAKENING",
+        0x0F: "PARLYZ_HEAL",
+        0x10: "FULL_RESTORE",
+        0x11: "MAX_POTION",
+        0x12: "HYPER_POTION",
+        0x13: "SUPER_POTION",
+        0x14: "POTION",
+        0x15: "BOULDERBADGE",
+        0x16: "CASCADEBADGE",
+        0x17: "THUNDERBADGE",
+        0x18: "RAINBOWBADGE",
+        0x19: "SOULBADGE",
+        0x1A: "MARSHBADGE",
+        0x1B: "VOLCANOBADGE",
+        0x1C: "EARTHBADGE",
+        0x1D: "ESCAPE_ROPE",
+        0x1E: "REPEL",
+        0x1F: "OLD_AMBER",
+        0x20: "FIRE_STONE",
+        0x21: "THUNDER_STONE",
+        0x22: "WATER_STONE",
+        0x23: "HP_UP",
+        0x24: "PROTEIN",
+        0x25: "IRON",
+        0x26: "CARBOS",
+        0x27: "CALCIUM",
+        0x28: "RARE_CANDY",
+        0x29: "DOME_FOSSIL",
+        0x2A: "HELIX_FOSSIL",
+        0x2B: "SECRET_KEY",
+        0x2C: "?????",
+        0x2D: "BIKE_VOUCHER",
+        0x2E: "X_ACCURACY",
+        0x2F: "LEAF_STONE",
+        0x30: "CARD_KEY",
+        0x31: "NUGGET",
+        0x32: "PP_UP",
+        0x33: "POKE_DOLL",
+        0x34: "FULL_HEAL",
+        0x35: "REVIVE",
+        0x36: "MAX_REVIVE",
+        0x37: "GUARD_SPEC",
+        0x38: "SUPER_REPEL",
+        0x39: "MAX_REPEL",
+        0x3A: "DIRE_HIT",
+        0x3B: "COIN",
+        0x3C: "FRESH_WATER",
+        0x3D: "SODA_POP",
+        0x3E: "LEMONADE",
+        0x3F: "SS_TICKET",
+        0x40: "GOLD_TEETH",
+        0x41: "X_ATTACK",
+        0x42: "X_DEFEND",
+        0x43: "X_SPEED",
+        0x44: "X_SPECIAL",
+        0x45: "COIN_CASE",
+        0x46: "OAKS_PARCEL",
+        0x47: "ITEMFINDER",
+        0x48: "SILPH_SCOPE",
+        0x49: "POKE_FLUTE",
+        0x4A: "LIFT_KEY",
+        0x4B: "EXP_ALL",
+        0x4C: "OLD_ROD",
+        0x4D: "GOOD_ROD",
+        0x4E: "SUPER_ROD",
+        0x4F: "PP_UP",
+        0x50: "ETHER",
+        0x51: "MAX_ETHER",
+        0x52: "ELIXER",
+        0x53: "MAX_ELIXER",
+        # TM/HMs start at different indices in Gen 1
+        0xC4: "HM01",  # Cut
+        0xC5: "HM02",  # Fly
+        0xC6: "HM03",  # Surf
+        0xC7: "HM04",  # Strength
+        0xC8: "HM05",  # Flash
+    }
+
+    def get_inventory(self) -> list[InventoryItem]:
+        """Read the player's bag inventory."""
+        inventory = []
+        item_count = self._emu.read_memory(self.Addr.BAG_ITEM_COUNT)
+
+        # Limit to reasonable max (bag can hold 20 unique items)
+        item_count = min(item_count, 20)
+
+        for i in range(item_count):
+            # Each item entry is 2 bytes: item_id, count
+            addr = self.Addr.BAG_ITEMS_START + (i * 2)
+            item_id = self._emu.read_memory(addr)
+            count = self._emu.read_memory(addr + 1)
+
+            if item_id == 0xFF or item_id == 0:
+                break  # End of list marker
+
+            item_name = self.ITEM_NAMES.get(item_id, f"ITEM_{item_id:02X}")
+            inventory.append(InventoryItem(
+                item_id=item_id,
+                item_name=item_name,
+                count=count,
+            ))
+
+        return inventory
+
+    # ─────────────────────────────────────────────────────────
     # FULL STATE
     # ─────────────────────────────────────────────────────────
 
@@ -502,6 +746,7 @@ class StateReader:
         party = self.get_party()
         badges = self.get_badges()
         money = self.get_money()
+        inventory = self.get_inventory()
         battle = self.get_battle_state() if mode == GameMode.BATTLE else None
 
         return GameState(
@@ -514,4 +759,5 @@ class StateReader:
             money=money,
             frame_count=self._emu.frame_count,
             battle=battle,
+            inventory=inventory,
         )

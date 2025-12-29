@@ -43,10 +43,51 @@ class Config(BaseSettings):
         description="Claude model to use for decision making",
     )
 
+    # Initial Objective Settings
+    initial_objective: str = Field(
+        default="become_champion",
+        description="Initial game objective (become_champion, defeat_gym, catch_pokemon)",
+    )
+    initial_objective_target: str = Field(
+        default="Elite Four",
+        description="Target for the initial objective (e.g., gym leader name, Pokemon name)",
+    )
+
+    # Agent Behavior Settings
+    use_opus_for_bosses: bool = Field(
+        default=True,
+        description="Use Opus model for gym leaders, Elite Four, and Champion battles",
+    )
+    checkpoint_interval_seconds: int = Field(
+        default=300,
+        ge=60,
+        description="Seconds between automatic checkpoints (save states)",
+    )
+
+    # Recovery Settings
+    max_retries: int = Field(
+        default=3,
+        ge=1,
+        description="Maximum retries for agent failures before recovery",
+    )
+    retry_delay_seconds: float = Field(
+        default=1.0,
+        ge=0.1,
+        description="Delay between retry attempts",
+    )
+
     # Logging
     log_level: str = Field(
         default="INFO",
         description="Logging level (DEBUG, INFO, WARNING, ERROR)",
+    )
+    log_to_file: bool = Field(
+        default=True,
+        description="Write logs to file in addition to console",
+    )
+    log_dir: str = Field(
+        default="logs",
+        description="Directory for log files",
     )
 
     def get_rom_path(self) -> Path:
@@ -60,6 +101,14 @@ class Config(BaseSettings):
     def validate_rom_exists(self) -> bool:
         """Check if the ROM file exists."""
         return self.get_rom_path().exists()
+
+    def get_log_dir(self) -> Path:
+        """Get the absolute path to the log directory."""
+        log_path = Path(self.log_dir)
+        if log_path.is_absolute():
+            return log_path
+        # Relative to project root
+        return Path(__file__).parent.parent / log_path
 
 
 # Global config instance

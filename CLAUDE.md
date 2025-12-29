@@ -37,17 +37,44 @@ poetry run python scripts/validate_data.py
 
 ## Architecture
 
-### Data Flow (MVP)
+### Data Flow
 
 ```
-StateReader (memory) → GameState → SimpleAgent (Claude API) → Action → EmulatorInterface (PyBoy)
+EmulatorInterface (PyBoy)
+        ↓
+StateReader (memory) → EmulatorGameState
+        ↓
+StateConverter → AgentGameState (enriched with types, moves, stats)
+        ↓
+Orchestrator (Sonnet) → routes by game mode
+        ↓
+    ┌───────────────┬───────────────┐
+    ↓               ↓               ↓
+Navigation      Battle           Menu
+ (Haiku)     (Sonnet/Opus)     (Haiku)
+        ↓
+AgentResult → Button/Movement actions
+        ↓
+EmulatorInterface (execute)
 ```
 
-1. `StateReader` reads memory addresses to build `GameState` dataclass
-2. `SimpleAgent.get_action()` formats state and calls Claude API with tools
-3. Claude returns a tool call (e.g., `press_button` with `button: "A"`)
-4. `GameLoop._execute_action()` translates to `EmulatorInterface` method calls
-5. Emulator advances frames, loop repeats
+1. `StateReader` reads memory addresses into `EmulatorGameState` (raw data)
+2. `StateConverter` enriches with Pokemon types, moves, stats from knowledge base → `AgentGameState`
+3. `Orchestrator` detects game mode and routes to specialist agent
+4. Specialist agent returns `AgentResult` with action to execute
+5. `GameLoop._execute_result()` translates to `EmulatorInterface` calls
+6. Emulator advances frames, loop repeats
+
+### Two GameState Types
+
+The codebase has two distinct GameState classes:
+
+| Type | Location | Purpose |
+|------|----------|---------|
+| `EmulatorGameState` | `src/emulator/state_reader.py` | Raw data from memory (int map_id, minimal Pokemon info) |
+| `AgentGameState` | `src/agent/state.py` | Semantic state for agents (str map names, full Pokemon data, objectives) |
+
+`StateConverter` bridges these: reads raw state, enriches with knowledge base, updates agent state.
 
 ### Multi-Agent System
 
@@ -58,9 +85,7 @@ Orchestrator (Sonnet) → detects mode, manages objectives
     └── Menu (Haiku) → healing, shopping, inventory
 ```
 
-**Status:** Phases 1-4 complete. Integration (Phase 5) pending.
-
-See `docs/implementation/plan.md` for phase status and `docs/implementation/tasks.md` for task tracking.
+**All 5 implementation phases complete.** See `docs/implementation/plan.md` for details.
 
 ### Specialized Agents
 
@@ -153,6 +178,21 @@ Key components:
 - `trainer_vision.py` - Calculates trainer line-of-sight zones
 - `cross_map.py` - BFS for map sequence, then A* per segment
 
+### Error Recovery
+
+`src/recovery.py` provides failure diagnosis and recovery:
+
+```python
+from src.recovery import diagnose_failure, execute_recovery, RecoveryManager
+
+# Diagnose failure and get recommended action
+action = diagnose_failure(state, "stuck in navigation, no path found")
+# Returns RecoveryAction with type: fly_to_pc, grind, wait_for_respawn, etc.
+
+# Execute recovery
+success = execute_recovery(action, game_loop)
+```
+
 ## Knowledge Base
 
 Game data is extracted from the `pret/pokered` disassembly repository into JSON files in `data/`, with Python accessor classes in `src/knowledge/`.
@@ -208,6 +248,12 @@ Optional:
 - `EMULATION_SPEED` - 0=unlimited, 1=normal (default: 1)
 - `HEADLESS` - Run without display (default: false)
 - `AGENT_MODEL` - Claude model (default: claude-sonnet-4-5-20250929)
+- `INITIAL_OBJECTIVE` - Starting objective: become_champion, defeat_gym, catch_pokemon (default: become_champion)
+- `INITIAL_OBJECTIVE_TARGET` - Target for objective (default: Elite Four)
+- `USE_OPUS_FOR_BOSSES` - Auto-escalate to Opus for boss battles (default: true)
+- `CHECKPOINT_INTERVAL_SECONDS` - Save state interval (default: 300)
+- `LOG_LEVEL` - DEBUG, INFO, WARNING, ERROR (default: INFO)
+- `LOG_TO_FILE` - Write logs to logs/ directory (default: true)
 
 ## ROM File
 
