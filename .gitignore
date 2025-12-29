@@ -60,6 +60,9 @@ logs/
 htmlcov/
 .mypy_cache/
 
+# External repositories (cloned for data extraction)
+external/
+
 # OS
 .DS_Store
 Thumbs.db
