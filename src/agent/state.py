@@ -59,6 +59,8 @@ class GameState:
     @property
     def needs_healing(self) -> bool:
         """Check if party needs healing."""
+        if not self.party:
+            return False
         return self.party_hp_percent < 50 or self.fainted_count > 0
 
     def push_objective(self, objective: Objective) -> None:

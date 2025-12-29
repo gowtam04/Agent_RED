@@ -49,7 +49,7 @@ StateReader (memory) → GameState → SimpleAgent (Claude API) → Action → E
 4. `GameLoop._execute_action()` translates to `EmulatorInterface` method calls
 5. Emulator advances frames, loop repeats
 
-### Multi-Agent System (In Progress)
+### Multi-Agent System
 
 ```
 Orchestrator (Sonnet) → detects mode, manages objectives
@@ -58,11 +58,34 @@ Orchestrator (Sonnet) → detects mode, manages objectives
     └── Menu (Haiku) → healing, shopping, inventory
 ```
 
-**Framework (Complete):** Types, GameState, BaseAgent, AgentRegistry, ObjectiveStack, 38 tool definitions in `src/agent/` and `src/tools/`.
-
-**Agents (Phase 3):** Specialized agent implementations pending.
+**Status:** Phases 1-4 complete. Integration (Phase 5) pending.
 
 See `docs/implementation/plan.md` for phase status and `docs/implementation/tasks.md` for task tracking.
+
+### Specialized Agents
+
+| Agent | File | Model | Tools | Purpose |
+|-------|------|-------|-------|---------|
+| `OrchestratorAgent` | `src/agent/orchestrator.py` | Sonnet | 7 | Mode detection, objective management, agent routing |
+| `NavigationAgent` | `src/agent/navigation.py` | Haiku | 8 | Movement, map data, HM usage, A* pathfinding |
+| `BattleAgent` | `src/agent/battle.py` | Sonnet/Opus | 9 | Type effectiveness, damage calc, move selection |
+| `MenuAgent` | `src/agent/menu.py` | Haiku | 14 | Healing, shopping, party/PC management |
+
+**Opus Escalation:** BattleAgent automatically switches to Opus for gym leaders, Elite Four, and Champion battles.
+
+```python
+from src.agent import (
+    OrchestratorAgent, NavigationAgent, BattleAgent, MenuAgent,
+    AgentRegistry, GameState,
+)
+
+# Get agents via registry
+registry = AgentRegistry()
+battle_agent = registry.get_agent("BATTLE")
+
+# Or instantiate directly
+orchestrator = OrchestratorAgent(client=anthropic_client)
+```
 
 ### Agent Framework Types
 
@@ -71,26 +94,64 @@ from src.agent import (
     # Types
     GameMode, BattleType, Direction, Position, Stats, Move, Pokemon,
     BattleState, Objective, AgentResult,
-    # Classes
-    GameState, BaseAgent, AgentRegistry, ObjectiveStack,
+    # State & Objectives
+    GameState, ObjectiveStack, create_heal_objective, create_gym_objective,
 )
 
 # Game state with objective management
 state = GameState()
 state.push_objective(Objective(type="defeat_gym", target="Brock"))
+state.needs_healing  # True if any Pokemon <= 50% HP or fainted
 
 # Agent routing by game mode
 registry = AgentRegistry()
 agent_type = registry.route_by_mode("BATTLE")  # Returns "BATTLE"
+registry.should_escalate_to_opus(state)  # True for boss battles
 ```
 
 ### Tool Definitions
 
 38 tools defined in `src/tools/definitions.py`:
-- `ORCHESTRATOR_TOOLS` (7): detect_game_mode, get_current_objective, route_to_agent, etc.
-- `NAVIGATION_TOOLS` (8): get_current_position, find_path, execute_movement, etc.
-- `BATTLE_TOOLS` (9): calculate_type_effectiveness, estimate_damage, get_best_move, etc.
-- `MENU_TOOLS` (14): heal_at_pokemon_center, shop_buy, use_item, etc.
+- `ORCHESTRATOR_TOOLS` (7): detect_game_mode, get_current_objective, route_to_agent, manage_objective_stack, etc.
+- `NAVIGATION_TOOLS` (8): get_current_position, find_path, execute_movement, use_hm_in_field, etc.
+- `BATTLE_TOOLS` (9): calculate_type_effectiveness, estimate_damage, get_best_move, calculate_catch_rate, etc.
+- `MENU_TOOLS` (14): heal_at_pokemon_center, shop_buy, manage_party, pc_deposit_pokemon, etc.
+
+### Pathfinding
+
+The `src/pathfinding/` module provides A* navigation with cross-map routing:
+
+```python
+from src.pathfinding import CrossMapRouter, TileWeights, find_path
+
+# High-level convenience function
+result = find_path(
+    from_map="PALLETTOWN", from_x=5, from_y=5,
+    to_map="VIRIDIANCITY",
+    hms_available=["CUT"],
+    avoid_grass=True,
+    avoid_trainers=True,
+)
+
+# Or use CrossMapRouter directly for more control
+router = CrossMapRouter()
+result = router.find_path(
+    from_map="PALLETTOWN", from_x=5, from_y=5,
+    to_map="VIRIDIANCITY",
+    weights=TileWeights(grass=5.0, trainer_adjacent=100.0),
+)
+
+if result.success:
+    for map_id, moves in result.segments:
+        print(f"{map_id}: {moves}")  # ["UP", "UP", "RIGHT", ...]
+```
+
+Key components:
+- `astar.py` - A* algorithm with configurable tile weights
+- `graph.py` - MapGraph loads collision data from map JSON files
+- `tiles.py` - TileType enum, TileWeights for grass/trainer avoidance
+- `trainer_vision.py` - Calculates trainer line-of-sight zones
+- `cross_map.py` - BFS for map sequence, then A* per segment
 
 ## Knowledge Base
 

@@ -76,82 +76,91 @@
 
 ---
 
-## Phase 3: Agents
+## Phase 3: Agents ✅
 
 ### Orchestrator Agent
-- ⬜ `src/agent/orchestrator.py`
-- ⬜ Tool: `detect_game_mode`
-- ⬜ Tool: `get_current_objective`
-- ⬜ Tool: `get_next_milestone`
-- ⬜ Tool: `check_requirements`
-- ⬜ Tool: `route_to_agent`
-- ⬜ Tool: `update_game_state`
-- ⬜ Tool: `manage_objective_stack`
+- ✅ `src/agent/orchestrator.py`
+- ✅ Tool: `detect_game_mode`
+- ✅ Tool: `get_current_objective`
+- ✅ Tool: `get_next_milestone`
+- ✅ Tool: `check_requirements`
+- ✅ Tool: `route_to_agent`
+- ✅ Tool: `update_game_state`
+- ✅ Tool: `manage_objective_stack`
 
 ### Navigation Agent
-- ⬜ `src/agent/navigation.py`
-- ⬜ Tool: `get_current_position`
-- ⬜ Tool: `get_map_data`
-- ⬜ Tool: `find_path`
-- ⬜ Tool: `get_interactables`
-- ⬜ Tool: `execute_movement`
-- ⬜ Tool: `check_route_accessibility`
-- ⬜ Tool: `get_hidden_items`
-- ⬜ Tool: `use_hm_in_field`
+- ✅ `src/agent/navigation.py`
+- ✅ Tool: `get_current_position`
+- ✅ Tool: `get_map_data`
+- ✅ Tool: `find_path` (implemented with A* pathfinding)
+- ✅ Tool: `get_interactables`
+- ✅ Tool: `execute_movement`
+- ✅ Tool: `check_route_accessibility`
+- ✅ Tool: `get_hidden_items`
+- ✅ Tool: `use_hm_in_field`
 
 ### Battle Agent
-- ⬜ `src/agent/battle.py`
-- ⬜ Tool: `get_pokemon_data`
-- ⬜ Tool: `calculate_type_effectiveness`
-- ⬜ Tool: `estimate_damage`
-- ⬜ Tool: `calculate_catch_rate`
-- ⬜ Tool: `evaluate_switch_options`
-- ⬜ Tool: `get_best_move`
-- ⬜ Tool: `should_catch_pokemon`
-- ⬜ Tool: `battle_execute_action`
-- ⬜ Tool: `get_battle_state`
-- ⬜ Opus escalation for boss battles
+- ✅ `src/agent/battle.py`
+- ✅ Tool: `get_pokemon_data`
+- ✅ Tool: `calculate_type_effectiveness`
+- ✅ Tool: `estimate_damage`
+- ✅ Tool: `calculate_catch_rate`
+- ✅ Tool: `evaluate_switch_options`
+- ✅ Tool: `get_best_move`
+- ✅ Tool: `should_catch_pokemon`
+- ✅ Tool: `battle_execute_action`
+- ✅ Tool: `get_battle_state`
+- ✅ Opus escalation for boss battles
 
 ### Menu Agent
-- ⬜ `src/agent/menu.py`
-- ⬜ Tool: `navigate_menu`
-- ⬜ Tool: `open_start_menu`
-- ⬜ Tool: `get_inventory`
-- ⬜ Tool: `use_item`
-- ⬜ Tool: `heal_at_pokemon_center`
-- ⬜ Tool: `shop_buy`
-- ⬜ Tool: `shop_sell`
-- ⬜ Tool: `get_shop_inventory`
-- ⬜ Tool: `manage_party`
-- ⬜ Tool: `teach_move`
-- ⬜ Tool: `pc_deposit_pokemon`
-- ⬜ Tool: `pc_withdraw_pokemon`
-- ⬜ Tool: `handle_dialogue`
-- ⬜ Tool: `get_party_status`
+- ✅ `src/agent/menu.py`
+- ✅ Tool: `navigate_menu`
+- ✅ Tool: `open_start_menu`
+- ✅ Tool: `get_inventory`
+- ✅ Tool: `use_item`
+- ✅ Tool: `heal_at_pokemon_center`
+- ✅ Tool: `shop_buy`
+- ✅ Tool: `shop_sell`
+- ✅ Tool: `get_shop_inventory`
+- ✅ Tool: `manage_party`
+- ✅ Tool: `teach_move`
+- ✅ Tool: `pc_deposit_pokemon`
+- ✅ Tool: `pc_withdraw_pokemon`
+- ✅ Tool: `handle_dialogue`
+- ✅ Tool: `get_party_status`
 
 ### Testing
-- ⬜ `tests/test_agent/test_orchestrator.py`
-- ⬜ `tests/test_agent/test_navigation.py`
-- ⬜ `tests/test_agent/test_battle.py`
-- ⬜ `tests/test_agent/test_menu.py`
+- ✅ `tests/test_agent/test_orchestrator.py` (22 tests)
+- ✅ `tests/test_agent/test_navigation.py` (17 tests)
+- ✅ `tests/test_agent/test_battle.py` (19 tests)
+- ✅ `tests/test_agent/test_menu.py` (24 tests)
 
 ---
 
-## Phase 4: Pathfinding
+## Phase 4: Pathfinding ✅
+
+### Data Extraction
+- ✅ `scripts/extract_collision.py` - Extract collision data from pokered
+- ✅ Updated `data/maps/*.json` with width, height, tileset, connections, walkable tiles (223 maps)
 
 ### Core Algorithm
-- ⬜ `src/pathfinding/__init__.py`
-- ⬜ `src/pathfinding/tiles.py` - Tile types and weights
-- ⬜ `src/pathfinding/graph.py` - MapGraph class
-- ⬜ `src/pathfinding/astar.py` - A* implementation
+- ✅ `src/pathfinding/__init__.py` - Module exports + `find_path()` convenience function
+- ✅ `src/pathfinding/tiles.py` - TileType enum, TileWeights dataclass, weight calculations
+- ✅ `src/pathfinding/graph.py` - Node, Edge, MapGraph class
+- ✅ `src/pathfinding/astar.py` - A* implementation with PathResult
 
 ### Advanced Features
-- ⬜ `src/pathfinding/trainer_vision.py` - Line-of-sight
-- ⬜ `src/pathfinding/cross_map.py` - Multi-map routing
+- ✅ `src/pathfinding/trainer_vision.py` - Trainer vision cone calculations
+- ✅ `src/pathfinding/cross_map.py` - CrossMapRouter for multi-map paths
+
+### Integration
+- ✅ Updated `src/agent/navigation.py` - `_find_path` uses real CrossMapRouter
 
 ### Testing
-- ⬜ `tests/test_pathfinding/test_astar.py`
-- ⬜ `tests/test_pathfinding/test_cross_map.py`
+- ✅ `tests/test_pathfinding/test_tiles.py` (14 tests)
+- ✅ `tests/test_pathfinding/test_astar.py` (20 tests)
+- ✅ `tests/test_pathfinding/test_cross_map.py` (17 tests)
+- ✅ `tests/test_pathfinding/test_trainer.py` (18 tests)
 
 ---
 
@@ -192,11 +201,11 @@
 ### M2: Framework Ready ✅
 - ✅ Agent framework complete, agents can be instantiated
 
-### M3: Agents Working
-- ⬜ All agents implement their tools
+### M3: Agents Working ✅
+- ✅ All agents implement their tools (138 tests passing)
 
-### M4: Navigation Working
-- ⬜ A* pathfinding integrated with Navigation agent
+### M4: Navigation Working ✅
+- ✅ A* pathfinding integrated with Navigation agent
 
 ### M5: Full Integration
 - ⬜ Complete game loop running with all agents
@@ -211,9 +220,11 @@
 **Active Tasks:**
 (none yet)
 
+**Completed:**
+- Phase 4: Pathfinding ✅ (69 new tests, 207 total tests passing)
+
 **Next Up:**
-1. Start Phase 3: Implement OrchestratorAgent, NavigationAgent, BattleAgent, MenuAgent
-2. Start Phase 4: A* pathfinding (can run in parallel with Phase 3)
+1. Start Phase 5: Integration (connect all agents to game loop)
 
 ---
 

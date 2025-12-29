@@ -23,25 +23,23 @@ class AgentRegistry:
     def _create_agent(self, agent_type: AgentType) -> BaseAgent:
         """Create a new agent instance."""
         # Import here to avoid circular imports
-        # These will be implemented in Phase 3
-        # from .orchestrator import OrchestratorAgent
-        # from .navigation import NavigationAgent
-        # from .battle import BattleAgent
-        # from .menu import MenuAgent
+        from .battle import BattleAgent
+        from .menu import MenuAgent
+        from .navigation import NavigationAgent
+        from .orchestrator import OrchestratorAgent
 
-        # agent_classes = {
-        #     "ORCHESTRATOR": OrchestratorAgent,
-        #     "NAVIGATION": NavigationAgent,
-        #     "BATTLE": BattleAgent,
-        #     "MENU": MenuAgent,
-        # }
-        # return agent_classes[agent_type](client=self.client)
+        agent_classes: dict[AgentType, type[BaseAgent]] = {
+            "ORCHESTRATOR": OrchestratorAgent,
+            "NAVIGATION": NavigationAgent,
+            "BATTLE": BattleAgent,
+            "MENU": MenuAgent,
+        }
 
-        # Phase 2: Framework only - agents will be implemented in Phase 3
-        raise NotImplementedError(
-            f"Agent '{agent_type}' not yet implemented. "
-            "Specialized agents will be added in Phase 3."
-        )
+        agent_class = agent_classes.get(agent_type)
+        if not agent_class:
+            raise ValueError(f"Unknown agent type: {agent_type}")
+
+        return agent_class(client=self.client)
 
     def route_by_mode(self, mode: GameMode) -> AgentType:
         """Determine which agent should handle the current mode."""

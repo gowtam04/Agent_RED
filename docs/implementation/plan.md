@@ -50,26 +50,25 @@ Build the multi-agent infrastructure:
 - Tool definitions (38 tools)
 
 ### Phase 3: Agent Implementation
-**Status:** Not Started
-**Assignee:** TBD
+**Status:** ✅ Completed
 **Document:** [phase3_agents.md](phase3_agents.md)
 
 Implement all 4 specialized agents:
 - OrchestratorAgent (7 tools)
-- NavigationAgent (8 tools)
+- NavigationAgent (8 tools, `find_path` stubbed for Phase 4)
 - BattleAgent (9 tools, Opus for bosses)
 - MenuAgent (14 tools)
 
 ### Phase 4: Pathfinding
-**Status:** Not Started
-**Assignee:** TBD
+**Status:** ✅ Completed
 **Document:** [phase4_pathfinding.md](phase4_pathfinding.md)
 
 A* pathfinding system:
-- Core A* algorithm
-- Tile weights (grass avoidance)
-- Trainer vision cones
-- Cross-map routing
+- Core A* algorithm (`src/pathfinding/astar.py`)
+- Tile weights and grass avoidance (`src/pathfinding/tiles.py`)
+- Trainer vision cones (`src/pathfinding/trainer_vision.py`)
+- Cross-map routing (`src/pathfinding/cross_map.py`)
+- Map data extraction with collision data (`scripts/extract_collision.py`)
 
 ### Phase 5: Integration
 **Status:** Not Started

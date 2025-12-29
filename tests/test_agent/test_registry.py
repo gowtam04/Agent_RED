@@ -169,17 +169,24 @@ def test_should_escalate_to_opus_champion() -> None:
     assert registry.should_escalate_to_opus(state) is True
 
 
-def test_get_agent_not_implemented() -> None:
-    """Test that get_agent raises NotImplementedError for now."""
+def test_get_agent_orchestrator() -> None:
+    """Test that get_agent returns correct agent type for ORCHESTRATOR."""
     registry = AgentRegistry()
-    with pytest.raises(NotImplementedError):
-        registry.get_agent("ORCHESTRATOR")
+    agent = registry.get_agent("ORCHESTRATOR")
+    assert agent.AGENT_TYPE == "ORCHESTRATOR"
 
 
-def test_get_agent_not_implemented_all_types() -> None:
-    """Test NotImplementedError for all agent types."""
+def test_get_agent_all_types() -> None:
+    """Test get_agent returns correct agent for all types."""
     registry = AgentRegistry()
 
-    for agent_type in ["ORCHESTRATOR", "NAVIGATION", "BATTLE", "MENU"]:
-        with pytest.raises(NotImplementedError):
-            registry.get_agent(agent_type)  # type: ignore
+    expected_types = {
+        "ORCHESTRATOR": "ORCHESTRATOR",
+        "NAVIGATION": "NAVIGATION",
+        "BATTLE": "BATTLE",
+        "MENU": "MENU",
+    }
+
+    for agent_type, expected in expected_types.items():
+        agent = registry.get_agent(agent_type)  # type: ignore
+        assert agent.AGENT_TYPE == expected
